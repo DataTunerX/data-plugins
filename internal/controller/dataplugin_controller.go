@@ -59,7 +59,7 @@ type DataPluginReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 
 // Reconcile reads that state of the cluster for a Dataset object and makes changes based on the state read
-// and what is in the DataPlugin.Spec
+// and what is in the Dataset.Spec
 func (r *DataPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Dataset")
 
@@ -105,7 +105,7 @@ func (r *DataPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		// Build the path to the plugin YAML file
-		pluginPath := filepath.Join("plugins", dataPlugin.Spec.DatasetClass, dataPlugin.Spec.Provider, "plugin.yaml")
+		pluginPath := filepath.Join("plugins", dataPlugin.Spec.Provider, dataPlugin.Spec.DatasetClass, "plugin.yaml")
 		// Apply the plugin YAML file
 		if err := r.applyYAML(ctx, pluginPath, &dataset); err != nil {
 			r.Log.Errorf("unable to apply plugin YAML %v: %v", pluginPath, err)
