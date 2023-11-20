@@ -1,0 +1,316 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: data-prep-flow-
+  namespace: argo
+spec:
+  ttlStrategy:
+    secondsAfterCompletion: 36000 # Time to live after workflow is completed, replaces ttlSecondsAfterFinished
+    secondsAfterSuccess: 36000    # Time to live after workflow is successful
+    secondsAfterFailure: 3600    # Time to live after workflow fails
+  volumeClaimTemplates:
+    - metadata:
+        name: datadir
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+  entrypoint: data-prep
+  arguments:
+    parameters:
+      - name: exploreconfig
+        value: "{}"
+      - name: precleanconfig
+        value: "{}"
+      - name: choppingconfig
+        value: "{}"
+      - name: cleanconfig
+        value: "{}"
+      - name: uploadconfig
+        value: "{}"
+      # - name: qaconfig
+      #   value: "{}" 
+      # - name: qauploadconfig
+      #   value: "{}"
+  
+    
+  templates:
+    - name: data-prep
+      dag:
+        tasks:
+
+          - name: data-explore
+            template: s3-pdf-data-explore
+            arguments:
+              parameters:
+                - name: config
+                  value: "{{workflow.parameters.exploreconfig}}"
+
+          - name: data-preclean
+            dependencies: [data-explore]
+            template: pdf-basic-data-preclean
+            arguments:
+              parameters:
+                - name: config
+                  value: "{{workflow.parameters.precleanconfig}}"
+              artifacts:
+                - name: explorefilelist
+                  from: "{{tasks.data-explore.outputs.artifacts.explorefilelist}}"
+                  
+          - name: data-chopping
+            dependencies: [data-preclean]
+            template: pdf-basic-data-chopping
+            arguments:
+              parameters:
+                - name: config
+                  value: "{{workflow.parameters.choppingconfig}}"
+              artifacts:
+                - name: precleandatafilelist
+                  from: "{{tasks.data-preclean.outputs.artifacts.precleandatafilelist}}"
+
+          - name: data-clean
+            dependencies: [data-chopping]
+            template: pdf-basic-data-clean
+            arguments:
+              parameters:
+                - name: config
+                  value: "{{workflow.parameters.cleanconfig}}"
+              artifacts:
+                - name: choppeddatafilelist
+                  from: "{{tasks.data-chopping.outputs.artifacts.choppeddatafilelist}}"
+          - name: data-upload
+            dependencies: [data-clean]
+            template: s3-data-upload
+            arguments:
+              parameters:
+                - name: config
+                  value: "{{workflow.parameters.uploadconfig}}"
+              artifacts:
+                - name: cleandatafilelist
+                  from: "{{tasks.data-clean.outputs.artifacts.cleandatafilelist}}"
+          # - name: data-qa
+          #   dependencies: [data-clean]
+          #   template: pdf-basic-data-qa
+          #   arguments:
+          #     parameters:
+          #       - name: config
+          #         value: "{{workflow.parameters.qaconfig}}"
+          # - name: data-qa-upload
+          #   dependencies: [data-qa]
+          #   template: s3-data-upload
+          #   arguments:
+          #     parameters:
+          #       - name: destdatauri
+          #         value: "{{workflow.parameters.destdatauri}}"
+          #       - name: config
+          #         value: "{{workflow.parameters.qauploadconfig}}"
+  
+    - name: s3-pdf-data-explore
+      inputs:
+        parameters:
+          - name: config
+            value: "{{workflow.parameters.exploreconfig}}"
+        artifacts:
+          - name: config_file
+            path: /tmp/config.yaml
+            raw:
+              data: |
+                {{inputs.parameters.config}}
+      outputs:
+        artifacts:
+          - name: explorefilelist
+            path: /tmp/explorefilelist.yaml
+      container:
+        image: bostonlab/dataprep:v0.0.2
+        imagePullPolicy: Always
+        command: ["python", "data-explore.py"]
+        args: [ "--config_file", "/tmp/config.yaml" ]
+        volumeMounts:
+          - name: datadir
+            mountPath: /mnt/data
+        env:
+          - name: ACCESS_KEY
+            valueFrom:
+              secretKeyRef:          
+                name: miniosecret   
+                key: ACCESS_KEY       
+          - name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:             
+                name: miniosecret   
+                key: SECRET_KEY
+          - name: DATADIR
+            value: /mnt/data
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+
+
+    - name: pdf-basic-data-preclean
+      inputs:
+        parameters:
+          - name: config
+            value: "{{workflow.parameters.precleanconfig}}"
+        artifacts:
+          - name: config_file
+            path: /tmp/config.yaml
+            raw:
+              data: |
+                {{inputs.parameters.config}}
+          - name: explorefilelist
+            path: /tmp/filelist.yaml
+      outputs:
+        artifacts:
+          - name: precleandatafilelist
+            path: /tmp/precleandatafilelist.yaml
+      container:
+        image: bostonlab/dataprep:v0.0.2
+        imagePullPolicy: Always
+        command: ["python", "data-preclean.py"]
+        args: [ "--config_file", "/tmp/config.yaml", "--input_file", "/tmp/filelist.yaml" ]
+        volumeMounts:
+          - name: datadir
+            mountPath: /mnt/data
+        env:
+          - name: LOG_LEVEL
+            value: INFO
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+
+    - name: pdf-basic-data-chopping
+      inputs:
+        parameters:
+          - name: config
+            value: "{{workflow.parameters.choppingconfig}}"
+        artifacts:
+          - name: config_file
+            path: /tmp/config.yaml
+            raw:
+              data: |
+                {{inputs.parameters.config}}
+          - name: precleandatafilelist
+            path: /tmp/filelist.yaml
+      outputs:
+        artifacts:
+          - name: choppeddatafilelist
+            path: /tmp/choppeddatafilelist.yaml
+      container:
+        image: bostonlab/dataprep:v0.0.2
+        imagePullPolicy: Always
+        command: ["python", "data-chop.py"]
+        args: [ "--config_file", "/tmp/config.yaml", "--input_file", "/tmp/filelist.yaml" ]
+        volumeMounts:
+          - name: datadir
+            mountPath: /mnt/data
+        env:
+          - name: LOG_LEVEL
+            value: INFO
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+    
+    - name: pdf-basic-data-clean
+      inputs:
+        parameters:
+          - name: config
+            value: "{{workflow.parameters.cleanconfig}}"
+        artifacts:
+          - name: config_file
+            path: /tmp/config.yaml
+            raw:
+              data: |
+                {{inputs.parameters.config}}
+          - name: choppeddatafilelist
+            path: /tmp/filelist.yaml
+      outputs:
+        artifacts:
+          - name: cleandatafilelist
+            path: /tmp/cleandatafilelist.yaml
+      container:
+        image: bostonlab/dataprep:v0.0.2
+        imagePullPolicy: Always
+        command: ["python", "data-clean.py"]
+        args: [ "--config_file", "/tmp/config.yaml", "--input_file", "/tmp/filelist.yaml" ]
+        volumeMounts:
+          - name: datadir
+            mountPath: /mnt/data
+        env:
+          - name: LOG_LEVEL
+            value: INFO
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+
+    - name: s3-data-upload
+      inputs:
+        parameters:
+          - name: config
+            value: "{{workflow.parameters.uploadconfig}}"
+        artifacts:
+          - name: config_file
+            path: /tmp/config.yaml
+            raw:
+              data: |
+                {{inputs.parameters.config}}
+          - name: cleandatafilelist
+            path: /tmp/filelist.yaml
+      container:
+        image: bostonlab/dataprep:v0.0.2
+        imagePullPolicy: Always
+        command: ["python", "data-upload.py"]
+        args: [ "--config_file", "/tmp/config.yaml", "--input_file", "/tmp/filelist.yaml" ]
+        volumeMounts:
+          - name: datadir
+            mountPath: /mnt/data
+        env:
+          - name: ACCESS_KEY
+            valueFrom:
+              secretKeyRef:          
+                name: miniosecret   
+                key: ACCESS_KEY       
+          - name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:             
+                name: miniosecret   
+                key: SECRET_KEY
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+
+    # - name: pdf-basic-data-qa 
+    #     inputs:
+    #       parameters:
+    #         - name: config
+    #           value: "{{workflow.parameters.qaconfig}}"
+    #     outputs:
+    #       parameters:
+    #         - name: qadatauri
+    #           valueFrom:
+    #             path: /tmp/qadatauri
+    #     container:
+    #       image: bostonlab/dataprep:v0.0.1
+    #       imagePullPolicy: Always
+    #       command: ["python", "dataqa.py"]
+    #       args: [ "--config /tmp/config.json" ]
+    #       volumeMounts:
+    #         - name: datadir
+    #           mountPath: /mnt/data
+    #       env:
+    #         - name: LOG_LEVEL
+    #           value: INFO
+    #         - name: OPENAI_API_KEY
+    #           valueFrom:
+    #             secretKeyRef:
+    #               name: openaisecrets
+    #               key: apikey
+    #       resources:
+    #         requests:
+    #           memory: 4Gi
+    #           cpu: 2

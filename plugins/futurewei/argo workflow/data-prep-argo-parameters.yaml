@@ -1,0 +1,40 @@
+exploreconfig: |
+  inputDataset:
+    datasetNew:
+      name: exampleData
+      description: "A basic data set to be explored by the basic explorer"
+      dataResources:
+        - name: example1Ds
+          type: ObjectDataResource
+          bucketUri: "http://10.124.48.198:9000/whitepapers"
+          objects:
+            - prefix: OP
+              filter:
+                - "*.pdf"
+
+precleanconfig: |
+  config:
+    pageStart: 0
+    pageEnd: 7
+  
+choppingconfig: |
+  config:
+    splitSize: 5000000
+
+cleanconfig: |
+  config:
+    outputDataFileName: "whitepaperdataset.txt"
+    timeStamp: True
+  
+uploadconfig: |
+  outputDataset:
+    datasetNew:
+      name: uploadededDs
+      description: "The result of exploredData after upload"
+      dataResources:
+        - name: uploadDsResource
+          type: ObjectDataResource
+          writable: True
+          bucketUri: "http://10.124.48.198:9000/data-asset-pool1"
+      
+
