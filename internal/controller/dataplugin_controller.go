@@ -104,10 +104,16 @@ func (r *DataPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
 
+		// Merge parameters from DataPlugin and Dataset
+		mergedParameters, err := r.mergeParameters(&dataPlugin, &dataset)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		// Build the path to the plugin YAML file
 		pluginPath := filepath.Join("plugins", dataPlugin.Spec.Provider, dataPlugin.Spec.DatasetClass, "plugin.yaml")
 		// Apply the plugin YAML file
-		if err := r.applyYAML(ctx, pluginPath, &dataset); err != nil {
+		if err := r.applyYAML(ctx, pluginPath, &dataset, mergedParameters); err != nil {
 			r.Log.Errorf("unable to apply plugin YAML %v: %v", pluginPath, err)
 			return ctrl.Result{}, err
 		}
@@ -130,8 +136,36 @@ func isSubsetInfoValid(subsets []extensionv1beta1.Subset) bool {
 	return false
 }
 
+// Add a new method to merge parameters
+func (r *DataPluginReconciler) mergeParameters(dataPlugin *extensionv1beta1.DataPlugin, dataset *extensionv1beta1.Dataset) (map[string]interface{}, error) {
+	// Unmarshal the parameters from DataPlugin
+	var pluginParameters map[string]interface{}
+	if err := json.Unmarshal([]byte(dataPlugin.Spec.Parameters), &pluginParameters); err != nil {
+		r.Log.Errorf("unable to unmarshal plugin parameters from DataPlugin: %v", err)
+		return nil, err
+	}
+
+	// Unmarshal the parameters from Dataset
+	var datasetParameters map[string]interface{}
+	if err := json.Unmarshal([]byte(dataset.Spec.DatasetMetadata.Plugin.Parameters), &datasetParameters); err != nil {
+		r.Log.Errorf("unable to unmarshal plugin parameters from Dataset: %v", err)
+		return nil, err
+	}
+
+	// Merge the parameters, favoring dataset's parameters in case of conflicts
+	mergedParameters := make(map[string]interface{})
+	for key, value := range pluginParameters {
+		mergedParameters[key] = value
+	}
+	for key, value := range datasetParameters {
+		mergedParameters[key] = value
+	}
+
+	return mergedParameters, nil
+}
+
 // applyYAML reads a YAML file, replaces placeholders with environment variable values, and applies its content to the Kubernetes cluster
-func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, dataset *extensionv1beta1.Dataset) error {
+func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, dataset *extensionv1beta1.Dataset, parameters map[string]interface{}) error {
 
 	r.Log.Infof("Applying plugin YAML %v", path)
 	// Read the YAML file content
@@ -145,7 +179,7 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 	yamlStr := string(yamlFile)
 
 	// Replace placeholders with environment variable values and run-time parameters defined in the dataset
-	replacedYamlStr, err := r.replacePlaceholders(yamlStr, dataset)
+	replacedYamlStr, err := r.replacePlaceholders(yamlStr, parameters, dataset)
 	if err != nil {
 		r.Log.Errorf("unable to replace placeholders in YAML: %v", err)
 		return err
@@ -180,20 +214,11 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 }
 
 // replacePlaceholders replaces a specific placeholder in the YAML file with the value from an environment variable
-func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, dataset *extensionv1beta1.Dataset) (string, error) {
-
-	// Parameters holding the unmarshaled parameters
-	var parameters map[string]interface{}
-
-	// Unmarshal the parameters
-	err := json.Unmarshal([]byte(dataset.Spec.DatasetMetadata.Plugin.Parameters), &parameters)
-	if err != nil {
-		r.Log.Errorf("unable to unmarshal plugin parameters: %v", err)
-		return "", err
-	}
+func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters map[string]interface{}, dataset *extensionv1beta1.Dataset) (string, error) {
 
 	// Add the required fields defined in the plugin standard to parameters
-	parameters["completeNotifyUrl"] = config.GetCompleteNotifyURL()
+	baseUrl := config.GetCompleteNotifyURL()
+	parameters["completeNotifyUrl"] = baseUrl + config.GetDatatunerxSystemNamespace() + "/scorings" + dataset.Name
 
 	// Replace the value in template yaml
 	replacedYamlStr, err := parser.ReplaceTemplate(yamlStr, parameters)
