@@ -12,7 +12,7 @@ func init() {
 	// bind COMPLETE_NOTIFY_URL env var
 	config.BindEnv("complete_notify_url", "COMPLETE_NOTIFY_URL")
 	// bind DATATUNERX_SYSTEM_NAMESPACE env var
-	config.BindEnv("datatunerx_system_namespace", "DATUNERX_SYSTEM_NAMESPACE")
+	config.BindEnv("datatunerx_system_namespace", "DATATUNERX_SYSTEM_NAMESPACE")
 
 }
 

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: plugin-demo-nginx
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: nginx
@@ -12,13 +12,17 @@ spec:
       labels:
         app: nginx
     spec:
+      initContainers:
+      - name: init-container
+        image: curlimages/curl:latest  # 使用 curl 镜像
+        command: ['sh', '-c', 'sleep 10 && curl -X POST -H "Content-Type: application/json" -d "{\"spec\": {\"datasetMetadata\": {\"datasetInfo\": {\"subsets\": [{\"name\": \"fromPlugin\", \"splits\": {\"train\": {\"file\": \"s3://train-by-plugin-sample\"}, \"test\": {\"file\": \"s3://test-by-plugin-sample\"}, \"validate\": {\"file\": \"s3://validate-by-plugin-sample\"}}}]}}}}" {{ .CompleteNotifyUrl }}']
       containers:
-        - name: nginx
-          image: nginx
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "200m"
-            requests:
-              memory: "64Mi"
-              cpu: "100m"
+      - name: nginx
+        image: nginx
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
