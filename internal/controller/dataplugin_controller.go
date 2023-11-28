@@ -26,7 +26,7 @@ import (
 	extensionv1beta1 "github.com/DataTunerX/meta-server/api/extension/v1beta1" // import DataPlugin API
 	"github.com/DataTunerX/utility-server/logging"
 	"github.com/DataTunerX/utility-server/parser"
-	"github.com/qiniu/x/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -138,18 +138,26 @@ func isSubsetInfoValid(subsets []extensionv1beta1.Subset) bool {
 
 // Add a new method to merge parameters
 func (r *DataPluginReconciler) mergeParameters(dataPlugin *extensionv1beta1.DataPlugin, dataset *extensionv1beta1.Dataset) (map[string]interface{}, error) {
-	// Unmarshal the parameters from DataPlugin
+	// Initialize pluginParameters as an empty map
 	var pluginParameters map[string]interface{}
-	if err := json.Unmarshal([]byte(dataPlugin.Spec.Parameters), &pluginParameters); err != nil {
-		r.Log.Errorf("unable to unmarshal plugin parameters from DataPlugin: %v", err)
-		return nil, err
+
+	// Check if DataPlugin has non-empty Spec.Parameters
+	if dataPlugin.Spec.Parameters != "" {
+		// Unmarshal the parameters from DataPlugin
+		if err := json.Unmarshal([]byte(dataPlugin.Spec.Parameters), &pluginParameters); err != nil {
+			r.Log.Errorf("unable to unmarshal plugin parameters from DataPlugin: %v", err)
+			return nil, err
+		}
 	}
 
 	// Unmarshal the parameters from Dataset
 	var datasetParameters map[string]interface{}
-	if err := json.Unmarshal([]byte(dataset.Spec.DatasetMetadata.Plugin.Parameters), &datasetParameters); err != nil {
-		r.Log.Errorf("unable to unmarshal plugin parameters from Dataset: %v", err)
-		return nil, err
+	if dataset.Spec.DatasetMetadata.Plugin.Parameters != "" {
+		// Unmarshal the parameters from Dataset
+		if err := json.Unmarshal([]byte(dataset.Spec.DatasetMetadata.Plugin.Parameters), &datasetParameters); err != nil {
+			r.Log.Errorf("unable to unmarshal plugin parameters from Dataset: %v", err)
+			return nil, err
+		}
 	}
 
 	// Merge the parameters, favoring dataset's parameters in case of conflicts
@@ -218,7 +226,7 @@ func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters ma
 
 	// Add the required fields defined in the plugin standard to parameters
 	baseUrl := config.GetCompleteNotifyURL()
-	parameters["completeNotifyUrl"] = baseUrl + config.GetDatatunerxSystemNamespace() + "/scorings" + dataset.Name
+	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl + dataset.Namespace + "/datasets/" + dataset.Name
 
 	// Replace the value in template yaml
 	replacedYamlStr, err := parser.ReplaceTemplate(yamlStr, parameters)
