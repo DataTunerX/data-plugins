@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -185,9 +186,11 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 
 	// Convert the file content to a string
 	yamlStr := string(yamlFile)
-
+	// Generate a random string
+	randomString := r.generateRandomString(5) // You can customize the length of the random string
+	objName := dataset.GetName() + "-" + randomString
 	// Replace placeholders with environment variable values and run-time parameters defined in the dataset
-	replacedYamlStr, err := r.replacePlaceholders(yamlStr, parameters, dataset)
+	replacedYamlStr, err := r.replacePlaceholders(yamlStr, parameters, dataset, objName)
 	if err != nil {
 		r.Log.Errorf("unable to replace placeholders in YAML: %v", err)
 		return err
@@ -212,6 +215,9 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 		return err
 	}
 
+	// Modify the name of unstructuredObj
+	unstructuredObj.SetName(objName)
+
 	// Apply the unstructured object using the client
 	if err := r.applyClient(ctx, unstructuredObj); err != nil {
 		r.Log.Errorf("unable to apply Unstructured object: %v", err)
@@ -221,13 +227,23 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 	return nil
 }
 
+// generateRandomString generates a random string of specified length
+func (r *DataPluginReconciler) generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(result)
+}
+
 // replacePlaceholders replaces a specific placeholder in the YAML file with the value from an environment variable
-func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters map[string]interface{}, dataset *extensionv1beta1.Dataset) (string, error) {
+func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters map[string]interface{}, dataset *extensionv1beta1.Dataset, objName string) (string, error) {
 
 	// Add the required fields defined in the plugin standard to parameters
 	baseUrl := config.GetCompleteNotifyURL()
-	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl + dataset.Namespace + "/datasets/" + dataset.Name
-
+	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl + dataset.Namespace + "/datasets/" + dataset.Name + "/" + objName
+	parameters["Name"] = objName
 	// Replace the value in template yaml
 	replacedYamlStr, err := parser.ReplaceTemplate(yamlStr, parameters)
 	if err != nil {
