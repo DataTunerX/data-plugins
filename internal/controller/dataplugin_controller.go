@@ -22,6 +22,8 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/DataTunerX/data-plugins/pkg/config"
 	extensionv1beta1 "github.com/DataTunerX/meta-server/api/extension/v1beta1" // import DataPlugin API
@@ -229,7 +231,7 @@ func (r *DataPluginReconciler) applyYAML(ctx context.Context, path string, datas
 
 // generateRandomString generates a random string of specified length
 func (r *DataPluginReconciler) generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "abcdefghijklmnopqrstuvwxyz"
 	result := make([]byte, length)
 	for i := range result {
 		result[i] = charset[rand.Intn(len(charset))]
@@ -237,12 +239,46 @@ func (r *DataPluginReconciler) generateRandomString(length int) string {
 	return string(result)
 }
 
+// ObjectMetadata represents the metadata of a Kubernetes object
+type ObjectMetadata struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+}
+
 // replacePlaceholders replaces a specific placeholder in the YAML file with the value from an environment variable
 func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters map[string]interface{}, dataset *extensionv1beta1.Dataset, objName string) (string, error) {
 
 	// Add the required fields defined in the plugin standard to parameters
 	baseUrl := config.GetCompleteNotifyURL()
-	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl + dataset.Namespace + "/datasets/" + dataset.Name + "/" + objName
+
+	var apiVersion string
+	var kind string
+	apiVersionRegex := regexp.MustCompile(`\bapiVersion:\s*([^\s]+)`)
+	kindRegex := regexp.MustCompile(`\bkind:\s*([^\s]+)`)
+	apiVersionMatches := apiVersionRegex.FindStringSubmatch(yamlStr)
+	kindMatches := kindRegex.FindStringSubmatch(yamlStr)
+	if len(apiVersionMatches) >= 2 {
+		apiVersion = strings.TrimSpace(apiVersionMatches[1])
+	}
+	if len(kindMatches) >= 2 {
+		kind = strings.TrimSpace(kindMatches[1])
+	}
+	if apiVersion == "" || kind == "" {
+		r.Log.Errorf("unable to extract apiVersion and kind from YAML string")
+	}
+	groupVersion := strings.Split(apiVersion, "/")
+	var group string
+	var version string
+	if len(groupVersion) > 1 {
+		group = groupVersion[0]
+		version = groupVersion[1]
+	} else {
+		group = "core"
+		version = groupVersion[0]
+	}
+	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl +
+		dataset.Namespace + "/datasets/" + dataset.Name + "/" + group + "/" + version +
+		"/" + strings.ToLower(kind) + "s" + "/" + objName
 	parameters["Name"] = objName
 	// Replace the value in template yaml
 	replacedYamlStr, err := parser.ReplaceTemplate(yamlStr, parameters)
