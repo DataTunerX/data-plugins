@@ -114,7 +114,7 @@ func (r *DataPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		// Build the path to the plugin YAML file
-		pluginPath := filepath.Join("plugins", dataPlugin.Spec.Provider, dataPlugin.Spec.DatasetClass, "plugin.yaml")
+		pluginPath := filepath.Join("/plugins", dataPlugin.Spec.Provider, dataPlugin.Spec.DatasetClass, "plugin.yaml")
 		// Apply the plugin YAML file
 		if err := r.applyYAML(ctx, pluginPath, &dataset, mergedParameters); err != nil {
 			r.Log.Errorf("unable to apply plugin YAML %v: %v", pluginPath, err)
