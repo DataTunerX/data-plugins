@@ -13,6 +13,8 @@ func init() {
 	config.BindEnv("complete_notify_url", "COMPLETE_NOTIFY_URL")
 	// bind DATATUNERX_SYSTEM_NAMESPACE env var
 	config.BindEnv("datatunerx_system_namespace", "DATATUNERX_SYSTEM_NAMESPACE")
+	config.BindEnv("datatunerx_server_address", "DATATUNERX_SERVER_ADDRESS")
+	config.SetDefault("datatunerx_server_address", "http://datatunerx-server.")
 
 }
 
@@ -28,4 +30,8 @@ func GetCompleteNotifyURL() string {
 // GetDatatunerxSystemNamespace fetch DATUNERX_SYSTEM_NAMESPACE env var
 func GetDatatunerxSystemNamespace() string {
 	return config.GetString("datatunerx_system_namespace")
+}
+
+func GetDatatunerxServerAddress() string {
+	return config.GetString("datatunerx_server_address")
 }
