@@ -276,7 +276,7 @@ func (r *DataPluginReconciler) replacePlaceholders(yamlStr string, parameters ma
 		group = "core"
 		version = groupVersion[0]
 	}
-	parameters["CompleteNotifyUrl"] = "http://patch-k8s-server." + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl +
+	parameters["CompleteNotifyUrl"] = config.GetDatatunerxServerAddress() + config.GetDatatunerxSystemNamespace() + ".svc.cluster.local" + baseUrl +
 		dataset.Namespace + "/datasets/" + dataset.Name + "/" + group + "/" + version +
 		"/" + strings.ToLower(kind) + "s" + "/" + objName
 	parameters["Name"] = objName

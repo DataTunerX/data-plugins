@@ -131,21 +131,26 @@ spec:
 ```json
 [
     {
-        "Name": "Default",  // Dataset subset's name, e.g., Random Sample Subset, Balanced Class Subset, Time Window Subset, Feature Subset, Cross-Validation Subset, Outlier Detection Subset, etc. Default value is "Default" if not specified.
-        "Splits": {
-            "Train": {
-                "File": "s3://bucket/training_data.csv",  // Training Dataset's address. This can be an S3 protocol address, indicating the location of the training data file on an S3 bucket.
+        "name": "Default",  // Dataset subset's name, e.g., Random Sample Subset, Balanced Class Subset, Time Window Subset, Feature Subset, Cross-Validation Subset, Outlier Detection Subset, etc. Default value is "Default" if not specified.
+        "splits": {
+            "train": {
+                "file": "s3://bucket/training_data.csv",  // Training Dataset's address. This can be an S3 protocol address, indicating the location of the training data file on an S3 bucket.
             },
-            "Test": {
-                "File": "s3://bucket/testing_data.csv",  // Testing Dataset's address. Similar to the training data address, this can be an S3 protocol address.
+            "test": {
+                "file": "s3://bucket/testing_data.csv",  // Testing Dataset's address. Similar to the training data address, this can be an S3 protocol address.
             },
-            "Validate": {
-                "File": "s3://bucket/validation_data.csv",  // Validation Dataset's address. Similar to the training data address, this can be an S3 protocol address.
+            "validate": {
+                "file": "s3://bucket/validation_data.csv",  // Validation Dataset's address. Similar to the training data address, this can be an S3 protocol address.
             }
         }
     }
 ]
 ```
+{
+  "score": 100,
+  "metrics": ["ROUGE"],
+  "details": {"rouge1", "rouge2", "rougeL", "rouge"}
+}
 
 数据集包含所有可用的数据，可以根据特定规则或目的选择一部分数据当作子集，子集进一步拆分为训练集、测试集、验证集。插件在处理好这样的数据结构后，将数据集信息传递到**通知接口**，更新 ***Dataset*** 信息，***Dataset*** 为可用状态。
 
