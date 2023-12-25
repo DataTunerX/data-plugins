@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/DataTunerX/meta-server v0.0.0-20231225093059-13cc8ff65bdc // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
@@ -30,7 +31,6 @@ require (
 )
 
 require (
-	github.com/DataTunerX/meta-server v0.0.0-20231220083942-784fa5895015
 	github.com/DataTunerX/utility-server v0.0.0-20231220022353-55c27ce4ac83
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
