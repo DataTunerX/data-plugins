@@ -38,8 +38,8 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/DataTunerX/meta-server v0.0.0-20231220083942-784fa5895015 h1:TSvZmvzdtt3RvFpvWiQqz07MfMhwfNkfb8uS7zNEyhk=
-github.com/DataTunerX/meta-server v0.0.0-20231220083942-784fa5895015/go.mod h1:ZegApA+ZAd5CNnWJ2YAOB876bGpnTxPDrpKL1Sa6yak=
+github.com/DataTunerX/meta-server v0.0.0-20231225093059-13cc8ff65bdc h1:94s49odKCAVLlokaSYBXltdonkrKKnWtHspzRezlY2A=
+github.com/DataTunerX/meta-server v0.0.0-20231225093059-13cc8ff65bdc/go.mod h1:ZegApA+ZAd5CNnWJ2YAOB876bGpnTxPDrpKL1Sa6yak=
 github.com/DataTunerX/utility-server v0.0.0-20231220022353-55c27ce4ac83 h1:cUyQmT2wR7qoCB2DRAGTaAYNA1Nd/Hpe0kHrv7K4BS0=
 github.com/DataTunerX/utility-server v0.0.0-20231220022353-55c27ce4ac83/go.mod h1:jwB4NB/emvy77wwDsU48oVLpdt6J0FIsaA8D7+I2pm4=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

@@ -76,18 +76,13 @@ func (r *DataPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Check if dataset.spec.datasetmetadata.subsets is not empty
 	if !isSubsetInfoValid(dataset.Spec.DatasetMetadata.DatasetInfo.Subsets) {
 		// If subsets are not valid, set dataset status to UNREADY and return
-		if dataset.Status == nil {
-			dataset.Status = &extensionv1beta1.DatasetStatus{}
-		}
 		dataset.Status.State = extensionv1beta1.DatasetUnready
+		// dataset.Status.ReferenceFinetuneName = []string{}
 		if err := r.Status().Update(ctx, &dataset); err != nil {
 			r.Log.Errorf("unable to update Dataset status: %v", err)
 			return ctrl.Result{}, err
 		}
 	} else {
-		if dataset.Status == nil {
-			dataset.Status = &extensionv1beta1.DatasetStatus{}
-		}
 		dataset.Status.State = extensionv1beta1.DatasetReady
 		if err := r.Status().Update(ctx, &dataset); err != nil {
 			r.Log.Errorf("unable to update Dataset status: %v", err)
